@@ -1,1 +1,62 @@
 
+from flask import Flask, jsonify
+import requests
+from threading import Lock
+import time
+
+app = Flask(__name__)
+
+# Configuration
+WINDOW_SIZE = 10
+TEST_SERVER_URL = "https://example.com/numbers/{numberid}"  # Replace with actual TestServer API URL
+TIMEOUT = 0.5  # 500ms timeout
+lock = Lock()
+
+# Sliding window to store numbers
+window = []
+
+# Helper functions
+def fetch_number(numberid):
+    try:
+        response = requests.get(TEST_SERVER_URL.format(numberid=numberid), timeout=TIMEOUT)
+        response.raise_for_status()
+        return response.json().get('number')
+    except (requests.exceptions.RequestException, ValueError):
+        return None
+
+def add_to_window(number):
+    with lock:
+        global window
+        if number not in window:
+            if len(window) >= WINDOW_SIZE:
+                window.pop(0)  # Remove the oldest number
+            window.append(number)
+
+def calculate_average():
+    with lock:
+        if len(window) == 0:
+            return 0.0
+        return sum(window) / len(window)
+
+@app.route('/numbers/<string:numberid>', methods=['GET'])
+def get_numbers(numberid):
+    prev_state = list(window)
+    
+    number = fetch_number(numberid)
+    if number is not None:
+        add_to_window(number)
+
+    curr_state = list(window)
+  avg = calculate_average() if len(window) == WINDOW_SIZE else None
+
+    response = {
+        "windowPrevState": prev_state,
+        "windowCurrState": curr_state,
+        "numbers": curr_state,
+        "avg": round(avg, 2) if avg is not None else None
+    }
+    
+    return jsonify(response), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
