@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 # Configuration
 WINDOW_SIZE = 10
-TEST_SERVER_URL = "https://example.com/numbers/{numberid}"  # Replace with actual TestServer API URL
+TEST_SERVER_URL = "https://20.244.56.144/test/primes"
 TIMEOUT = 0.5  # 500ms timeout
 lock = Lock()
 
